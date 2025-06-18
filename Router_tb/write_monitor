@@ -1,0 +1,97 @@
+class router_wr_monitor extends uvm_monitor;
+	`uvm_component_utils(router_wr_monitor)
+	
+  	virtual router_if.WMON_MP vif;
+
+	router_wr_agent_config m_cfg;
+
+  	uvm_analysis_port #(write_xtn) monitor_port;
+
+	extern function new(string name = "router_wr_monitor", uvm_component parent);
+	extern function void build_phase(uvm_phase phase);
+	extern function void connect_phase(uvm_phase phase);
+	extern task run_phase(uvm_phase phase);
+	extern task collect_data();
+	extern function void report_phase(uvm_phase phase);
+
+endclass
+
+//-----------------  constructor new method  -------------------//
+	function router_wr_monitor::new(string name = "router_wr_monitor", uvm_component parent);
+		
+		super.new(name,parent);
+		// create object for handle monitor_port using new
+ 		monitor_port = new("monitor_port", this);
+
+  	endfunction
+
+ 	function void router_wr_monitor::build_phase(uvm_phase phase);
+
+      	super.build_phase(phase);
+	// get the config object using uvm_config_db 
+		if(!uvm_config_db #(router_wr_agent_config)::get(this,"","set_from_wr_agt_top",m_cfg))
+			`uvm_fatal("CONFIG","cannot get() m_cfg from uvm_config_db. Have you set() it?") 
+		
+        endfunction
+
+ 	function void router_wr_monitor::connect_phase(uvm_phase phase);
+    
+    	vif = m_cfg.vif;
+      
+    endfunction
+
+	task router_wr_monitor::run_phase(uvm_phase phase);
+      
+      	forever
+        
+        collect_data();   
+      
+    endtask
+
+
+    task router_wr_monitor::collect_data();
+
+    	write_xtn data_rcv;
+      
+	    data_rcv= write_xtn::type_id::create("data_rcv");
+          
+      	@(vif.WR_MON_CB);
+      
+	 	wait(!vif.WR_MON_CB.busy && vif.WR_MON_CB.pkt_valid)
+
+	    data_rcv.header = vif.WR_MON_CB.data_in;
+	
+			
+      	@(vif.WR_MON_CB);
+      
+        data_rcv.payload=new[data_rcv.header[7:2]];
+
+		foreach(data_rcv.payload[i])
+			begin
+	
+	 			wait(!vif.WR_MON_CB.busy && vif.WR_MON_CB.pkt_valid)
+
+				data_rcv.payload[i]=vif.WR_MON_CB.data_in;
+
+          		@(vif.WR_MON_CB);
+
+			end
+		
+      	wait(!vif.WR_MON_CB.busy)
+
+        data_rcv.parity = vif.WR_MON_CB.data_in;
+
+        `uvm_info("ROUTER_WR_MONITOR",$sformatf("Printing from router write monitor at time %0t \n %s",$time,data_rcv.sprint()),UVM_LOW)
+          
+	 	monitor_port.write(data_rcv);
+      
+    	$display("Write data send to sb at time %0t",$time);
+      
+   	 	m_cfg.mon_rcvd_xtn_cnt++;
+      
+    endtask
+
+// UVM report_phase
+  function void router_wr_monitor::report_phase(uvm_phase phase);
+    `uvm_info(get_type_name(), $sformatf("Report: Router write Monitor Collected %0d Transactions", m_cfg.mon_rcvd_xtn_cnt), UVM_LOW)
+  endfunction
