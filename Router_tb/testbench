@@ -1,0 +1,62 @@
+
+`include "router_fifo.v"
+`include "router_FSM.v"
+`include "router_reg.v"
+`include "router_sync.v"
+`include "router_top.v"
+`include "router_if.sv"
+module top;
+
+import router_test_pkg::*;
+import uvm_pkg::*;
+
+int i;
+bit clock;
+
+	always
+		#10 clock = ~clock;
+	
+// instantiate the interface 4 times
+router_if in(clock);
+router_if in0(clock);
+router_if in1(clock);
+router_if in2(clock);
+
+// instantiate the rtl router and pass the interface as argument
+     router_top DUV(.clock		(in.clk),	
+		.resetn		(in.resetn),
+		.pkt_valid	(in.pkt_valid),
+		.data_in	(in.data_in),
+		.err		(in.err),
+		.busy		(in.busy),
+			
+		.read_enb_0	(in0.read_enb),
+		.read_enb_1	(in1.read_enb),
+		.read_enb_2	(in2.read_enb),
+		
+		.data_out_0	(in0.data_out),
+		.data_out_1	(in1.data_out),
+		.data_out_2	(in2.data_out),
+
+		.vld_out_0	(in0.vld_out),
+		.vld_out_1	(in1.vld_out),
+		.vld_out_2	(in2.vld_out)
+		);
+
+//in the initial block set the virtual interface instances as strings
+initial
+	begin
+  		$dumpfile("dump.vcd");
+	    $dumpvars(1);
+		uvm_config_db #(virtual router_if)::set(null,"*","vif",in);
+		uvm_config_db #(virtual router_if)::set(null,"*","vif0",in0);
+		uvm_config_db #(virtual router_if)::set(null,"*","vif1",in1);
+		uvm_config_db #(virtual router_if)::set(null,"*","vif2",in2);
+
+      
+       run_test("router_test1");
+	   run_test("router_test2");
+	end
+
+
+endmodule
