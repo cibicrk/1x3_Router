@@ -1,0 +1,34 @@
+class router_virtual_sequencer extends uvm_sequencer #(uvm_sequence_item);
+
+	`uvm_component_utils(router_virtual_sequencer);
+
+	router_wr_sequencer wr_seqrh[];
+
+	router_rd_sequencer rd_seqrh[];
+
+	env_config m_cfg;
+
+
+	extern function new(string name = "router_virtual_sequencer",uvm_component parent);
+	extern function void build_phase(uvm_phase phase);
+      
+endclass
+
+function router_virtual_sequencer::new(string name = "router_virtual_sequencer",uvm_component parent);
+	super.new(name,parent);
+endfunction
+
+function void router_virtual_sequencer::build_phase(uvm_phase phase);
+		// get the config object ram_env_config using uvm_config_db 
+	if(!uvm_config_db #(env_config)::get(this,"","set_from_test",m_cfg))
+	`uvm_fatal("VIRTUAL_SEQUENCER","cannot get() m_cfg from uvm_config_db. Have you set() it?")
+		// LAB : Create dynamic array handles wr_seqrh & rd_seqrh equal to
+	wr_seqrh=new[m_cfg.no_of_wr_agts];
+
+	rd_seqrh=new[m_cfg.no_of_rd_agts];
+
+		// the config parameter no_of_duts
+  	super.build_phase(phase);
+
+    		
+endfunction
