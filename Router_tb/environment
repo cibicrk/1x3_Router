@@ -1,0 +1,82 @@
+class router_tb extends uvm_env;
+
+
+	`uvm_component_utils(router_tb)
+
+	router_wr_agt_top wagt_top;
+
+	router_rd_agt_top ragt_top;
+
+	router_scoreboard sb;
+
+	router_virtual_sequencer v_sequencer;
+	
+	env_config m_cfg;
+
+	int i;
+	extern function new(string name="router_tb",uvm_component parent);
+	extern function void build_phase(uvm_phase phase);
+	extern function void connect_phase (uvm_phase phase);
+
+endclass
+
+function router_tb::new(string name="router_tb",uvm_component parent);
+	
+  	super.new(name,parent);
+
+endfunction
+
+function void router_tb::build_phase(uvm_phase phase);
+	
+  	if(!uvm_config_db#(env_config)::get(this,"","set_from_test",m_cfg))
+		`uvm_fatal("ROUTER_TB","cannot get configuration")
+	
+    if(m_cfg.has_wagent)
+		begin
+			wagt_top=router_wr_agt_top::type_id::create("wagt_top",this);	
+		end
+	if(m_cfg.has_ragent)
+		ragt_top=router_rd_agt_top::type_id::create("ragt_top",this);	
+	
+	if(m_cfg.has_scoreboard)
+		sb=router_scoreboard::type_id::create("sb",this);
+	
+	if(m_cfg.has_virtual_sequencer)	
+		v_sequencer=router_virtual_sequencer::type_id::create("v_sequencer",this);
+
+			
+endfunction
+
+function void router_tb::connect_phase(uvm_phase phase);
+
+if(m_cfg.has_virtual_sequencer)
+	begin
+		if(m_cfg.has_wagent)
+			begin
+				for(i=0;i<m_cfg.no_of_wr_agts;i++)
+		        v_sequencer.wr_seqrh[i]=wagt_top.wagnth[i].wr_seqrh;
+		    end
+
+
+	if(m_cfg.has_ragent)
+		begin
+			for(i=0;i<m_cfg.no_of_rd_agts;i++)
+			v_sequencer.rd_seqrh[i]=ragt_top.ragnth[i].rd_seqrh;
+		end 
+	end
+
+if(m_cfg.has_scoreboard)
+	begin
+		if(m_cfg.has_wagent)
+			begin
+       			for(i=0;i<m_cfg.no_of_wr_agts;i++)
+				wagt_top.wagnth[i].wr_mon.monitor_port.connect(sb.fifo_wr[i].analysis_export);
+			end
+
+      	if(m_cfg.has_ragent)
+			for(i=0;i<m_cfg.no_of_rd_agts;i++)
+			ragt_top.ragnth[i].rd_mon.monitor_port.connect(sb.fifo_rd[i].analysis_export);
+		
+	end
+
+endfunction	
