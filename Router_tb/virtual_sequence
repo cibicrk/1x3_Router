@@ -1,0 +1,139 @@
+class router_vbase_seq extends uvm_sequence #(uvm_sequence_item);
+
+	`uvm_object_utils(router_vbase_seq)
+    router_wr_sequencer wr_seqrh[];
+  	router_rd_sequencer rd_seqrh[];
+
+	env_config m_cfg;
+	router_virtual_sequencer vseqr;
+	extern function new(string name = "router_vbase_seq");
+	extern task body();
+
+//Declear the seqs
+//read_seq  rd_seq;
+//write_seq  wr_router_14_pkt_seqseq;
+	router_3_addr_seq wr_seq1;
+    router_14_pkt_seq wr_seq2;
+    rd_seqs rd_seq1;
+    rd_seqs rd_seq2;
+	rd_seqs rd_seq3;
+    
+      
+
+endclass
+
+function router_vbase_seq::new(string name = "router_vbase_seq");
+	super.new(name);
+endfunction
+
+
+task router_vbase_seq::body();
+// get the config object ram_env_config from database using uvm_config_db 
+	if(!uvm_config_db #(env_config)::get(null,get_full_name(),"set_from_test",m_cfg))
+		`uvm_fatal("CONFIG","cannot get() m_cfg from uvm_config_db. Have you set() it?")
+// initialize the dynamic arrays for write & read sequencers to m_cfg.no_of_duts
+	wr_seqrh = new[m_cfg.no_of_wr_agts];
+	rd_seqrh = new[m_cfg.no_of_rd_agts]; 
+
+	assert($cast(vseqr,m_sequencer))
+	
+    else
+		begin
+			`uvm_error("BODY", "Error in $cast of virtual sequencer")
+		end
+ 
+  	foreach(wr_seqrh[i])
+ 		wr_seqrh[i] = vseqr.wr_seqrh[i];
+ 	
+  	foreach(rd_seqrh[i])
+   		rd_seqrh[i] =vseqr.rd_seqrh[i]; 
+
+endtask
+
+
+class router_wr_vseq1 extends router_vbase_seq;
+
+	`uvm_object_utils(router_wr_vseq1)
+
+  	extern function new(string name = "router_wr_vseq1");
+
+	extern task body();
+
+endclass 
+
+	function router_wr_vseq1::new(string name ="router_wr_vseq1");
+		super.new(name);
+	endfunction
+
+	task router_wr_vseq1::body();
+        
+   		super.body();
+             
+        wr_seq1=router_3_addr_seq::type_id::create("wr_seq1");
+        rd_seq1=rd_seqs::type_id::create("rd_seq1");
+        rd_seq2=rd_seqs::type_id::create("rd_seq2");
+        rd_seq3=rd_seqs::type_id::create("rd_seq3");
+	         
+      	fork
+          
+		    begin
+            	wr_seq1.start(wr_seqrh[0]); 
+            end
+        
+			begin
+          
+            	fork
+                	rd_seq1.start(rd_seqrh[0]);
+                	rd_seq2.start(rd_seqrh[1]);
+                	rd_seq3.start(rd_seqrh[2]);
+                join_any
+              
+            	disable fork;
+                  
+            end
+                  
+		join
+              
+    endtask
+
+class router_wr_vseq2 extends router_vbase_seq;
+
+	`uvm_object_utils(router_wr_vseq2)
+
+	extern function new(string name = "router_wr_vseq2");
+
+	extern task body();
+
+endclass 
+
+	function router_wr_vseq2::new(string name ="router_wr_vseq2");
+		super.new(name);
+	endfunction
+
+task router_wr_vseq2::body();
+        
+	super.body();
+             
+	wr_seq2=router_14_pkt_seq::type_id::create("wr_seq2");
+    rd_seq1=rd_seqs::type_id::create("rd_seq1");
+    rd_seq2=rd_seqs::type_id::create("rd_seq2");
+    rd_seq3=rd_seqs::type_id::create("rd_seq3");
+	         
+      fork
+		    begin
+            	wr_seq2.start(wr_seqrh[0]); 
+            end
+        
+			begin
+            	fork
+                	rd_seq1.start(rd_seqrh[0]);
+                	rd_seq2.start(rd_seqrh[1]);
+                	rd_seq3.start(rd_seqrh[2]);
+              	join_any
+              
+             	disable fork;
+            
+            end
+      join
+              
+endtask
